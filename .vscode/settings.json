@@ -20,7 +20,7 @@
             "method.unsafe": "#ff6600"
         }
     },
-    "rust-analyzer.checkOnSave.command": "clippy",
+    "rust-analyzer.checkOnSave.command": "fmt",
     "files.autoSave": "afterDelay",
     // "editor.formatOnSave": true,
     "editor.formatOnPaste": true
