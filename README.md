@@ -13,3 +13,7 @@
     - 第11章 カーネル
         - Rust nightly build
         - QEMU
+
+## memo
+
+- x86_64のバージョンを0.13 -> 0.14に変更
