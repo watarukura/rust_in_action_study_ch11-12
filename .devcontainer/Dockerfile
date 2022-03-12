@@ -54,25 +54,25 @@ RUN apt-get install -y \
     rm -rf /var/lib/apt/lists/*
 
 # use from rust-analyzer
-RUN rustup component add rust-src && \
-    rustup component add rust-analysis && \
-    rustup component add rls && \
-    rustup component add rustfmt
-
 RUN rustup toolchain install nightly && \
     rustup default nightly && \
-    rustup component add llvm-tools-preview
-
-# vscode
-RUN groupadd -g 1000 vscode && \
-    useradd -m -s /bin/bash -u 1000 -g 1000 vscode
-USER vscode
-WORKDIR /vscode
-RUN mkdir -p /vscode/target && chown vscode:vscode /vscode/target
+    rustup component add llvm-tools-preview && \
+    rustup component add rust-src && \
+    rustup component add rust-analysis
 
 # development utilities
 RUN mold -run cargo install cargo-edit && \
     mold -run cargo install evcxr_jupyter --no-default-features && \
     evcxr_jupyter --install && \
     mold -run cargo install cargo-binutils && \
-    mold -run cargo install bootimage
+    mold -run cargo install bootimage && \
+    mold -run cargo install cargo-rls-install && \
+    mold -run cargo rls-install --nightly formatter
+
+# vscode
+# RUN groupadd -g 1000 vscode && \
+#     useradd -m -s /bin/bash -u 1000 -g 1000 vscode
+# USER vscode
+WORKDIR /vscode
+# RUN mkdir -p /vscode/target && chown vscode:vscode /vscode/target
+RUN mkdir -p /vscode/target
