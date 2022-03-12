@@ -3,11 +3,10 @@
 #![feature(core_intrinsics)]
 #![feature(lang_items)]
 #[allow(unused)]
-
-use core::intrinsics::{abort};
+use core::intrinsics::abort;
 use core::panic::PanicInfo;
 
-use x86_64::instructions::{hlt};
+use x86_64::instructions::hlt;
 
 #[panic_handler]
 #[no_mangle]
@@ -19,7 +18,7 @@ pub fn panic(_info: &PanicInfo) -> ! {
 
 #[lang = "eh_personality"]
 #[no_mangle]
-pub extern "C" fn eh_personality() { }
+pub extern "C" fn eh_personality() {}
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
