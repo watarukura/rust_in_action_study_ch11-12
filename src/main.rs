@@ -2,45 +2,13 @@
 #![no_main]
 #![feature(core_intrinsics)]
 #![feature(lang_items)]
-#[allow(unused)]
+
 use core::intrinsics::abort;
 use core::panic::PanicInfo;
 
 use x86_64::instructions::hlt;
 
-#[panic_handler]
-#[no_mangle]
-pub fn panic(_info: &PanicInfo) -> ! {
-    unsafe {
-        abort();
-    }
-}
-
-#[lang = "eh_personality"]
-#[no_mangle]
-pub extern "C" fn eh_personality() {}
-
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
-    let framebuffer = 0xb8000 as *mut u8;
-
-    unsafe {
-        framebuffer.offset(1).write_volatile(0x30);
-    }
-
-    loop {
-        hlt();
-    }
-}
-
-// struct VGACell {
-//     is_blinking: u1,
-//     backglound_color: u3,
-//     is_bright: u1,
-//     character_color: u3,
-//     character: u8,
-// }
-
+#[allow(unused)]
 #[derive(Clone, Copy)]
 #[repr(u8)]
 enum Color {
@@ -87,5 +55,31 @@ impl Cursor {
             }
             self.position += 2;
         }
+    }
+}
+
+#[panic_handler]
+#[no_mangle]
+pub fn panic(_info: &PanicInfo) -> ! {
+    abort();
+}
+
+#[lang = "eh_personality"]
+#[no_mangle]
+pub extern "C" fn eh_personality() {}
+
+#[no_mangle]
+pub extern "C" fn _start() -> ! {
+    let text = b"Rust in Action";
+
+    let mut cursor = Cursor {
+        position: 0,
+        foreground: Color::BrightCyan,
+        background: Color::Black,
+    };
+    cursor.print(text);
+
+    loop {
+        hlt();
     }
 }
