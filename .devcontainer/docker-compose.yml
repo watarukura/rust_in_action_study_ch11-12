@@ -8,9 +8,13 @@ services:
       - ..:/vscode:delegated
       # For building dependencies always use a volume, you get waaaay better performance.
       - target:/vscode/target
-    # Overrides default command so things don't shut down after the process ends.
+      # Overrides default command so things don't shut down after the process ends.
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      # use from X11
     command: sleep infinity
     working_dir: /vscode
+    environment:
+      - DISPLAY=host.docker.internal:0
 volumes:
   # The volume for cargo build
   target:

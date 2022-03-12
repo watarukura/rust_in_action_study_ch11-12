@@ -29,7 +29,7 @@ RUN git clone --branch "$mold_version" --depth 1 https://github.com/rui314/mold.
     mv /mold/mold-wrapper.so /usr/bin/mold-wrapper.so && \
     make clean
 
-# install gh and fish
+# install gh and fish and tig
 RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
       | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg && \
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
@@ -43,23 +43,36 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
     apt-get install -y \
       gh \
       fish \
-      tig && \
+      tig
+
+# install qemu
+RUN apt-get install -y \
+    qemu \
+    qemu-utils \
+    qemu-system-x86 \
+    qemu-system-gui && \
     rm -rf /var/lib/apt/lists/*
 
 # use from rust-analyzer
-RUN rustup component add rust-src && \
-    rustup component add rust-analysis && \
-    rustup component add rls && \
-    rustup component add rustfmt
-
-# vscode
-RUN groupadd -g 1000 vscode && \
-    useradd -m -s /bin/bash -u 1000 -g 1000 vscode
-USER vscode
-WORKDIR /vscode
-RUN mkdir -p /vscode/target && chown vscode:vscode /vscode/target
+RUN rustup toolchain install nightly && \
+    rustup default nightly && \
+    rustup component add llvm-tools-preview && \
+    rustup component add rust-src && \
+    rustup component add rust-analysis
 
 # development utilities
 RUN mold -run cargo install cargo-edit && \
     mold -run cargo install evcxr_jupyter --no-default-features && \
-    evcxr_jupyter --install
+    evcxr_jupyter --install && \
+    mold -run cargo install cargo-binutils && \
+    mold -run cargo install bootimage && \
+    mold -run cargo install cargo-rls-install && \
+    mold -run cargo rls-install --nightly formatter
+
+# vscode
+# RUN groupadd -g 1000 vscode && \
+#     useradd -m -s /bin/bash -u 1000 -g 1000 vscode
+# USER vscode
+WORKDIR /vscode
+# RUN mkdir -p /vscode/target && chown vscode:vscode /vscode/target
+RUN mkdir -p /vscode/target
