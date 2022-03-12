@@ -44,5 +44,5 @@ jobs:
       - name: Run lint
         uses: actions-rs/cargo@v1
         with:
-          command: clippy
-          args: +nightly --all-features -- -D warnings
+          command: +nightly clippy
+          args: --all-features -- -D warnings
