@@ -75,13 +75,15 @@ pub fn panic(info: &PanicInfo) -> ! {
         foreground: Color::White,
         background: Color::Red,
     };
-    for _ in 0..(80*25) {
+    for _ in 0..(80 * 25) {
         cursor.print(b" ");
     }
     cursor.position = 0;
     write!(cursor, "{}", info).unwrap();
 
-    loop { hlt(); }
+    loop {
+        hlt();
+    }
 }
 
 #[lang = "eh_personality"]
