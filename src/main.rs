@@ -1,96 +1,102 @@
-#![no_std]
-#![no_main]
-#![feature(core_intrinsics)]
-#![feature(lang_items)]
+#![feature(link_llvm_intrinsics)]
+#![allow(non_camel_case_types)]
+#![cfg(not(windows))]
 
-use core::fmt;
-use core::fmt::Write;
-// use core::intrinsics::abort;
-use core::panic::PanicInfo;
+use libc::{SIGALRM, SIGHUP, SIGQUIT, SIGTERM, SIGUSR1};
+use std::mem;
 
-use x86_64::instructions::hlt;
+const JMP_BUF_WIDTH: usize = mem::size_of::<usize>() * 8;
+type jmp_buf = [i8; JMP_BUF_WIDTH];
 
-#[allow(unused)]
-#[derive(Clone, Copy)]
-#[repr(u8)]
-enum Color {
-    Black = 0,
-    Blue = 1,
-    Green = 2,
-    Cyan = 3,
-    Red = 4,
-    Magenta = 5,
-    Brown = 6,
-    Gray = 7,
-    White = 8,
-    BrightBlue = 9,
-    BrightGreen = 10,
-    BrightCyan = 11,
-    BrightRed = 12,
-    BrightMagenta = 13,
-    Yellow = 14,
-    DarkGray = 15,
+static mut SHUT_DOWN: bool = false;
+static mut RETURN_HERE: jmp_buf = [0; JMP_BUF_WIDTH];
+const MOCK_SIGNAL_AT: usize = 3;
+
+extern "C" {
+    #[link_name = "llvm.eh.sjlj.setjmp"]
+    pub fn setjmp(_: *mut i8) -> i32;
+
+    #[link_name = "llvm.eh.sjlj.longjmp"]
+    pub fn longjmp(_: *mut i8);
 }
 
-struct Cursor {
-    position: isize,
-    foreground: Color,
-    background: Color,
+#[inline]
+fn ptr_to_jmp_buf() -> *mut i8 {
+    unsafe { &RETURN_HERE as *const i8 as *mut i8 }
 }
 
-impl Cursor {
-    fn color(&self) -> u8 {
-        let fg = self.foreground as u8;
-        let bg = (self.background as u8) << 4;
-        fg | bg
+#[inline]
+fn return_early() {
+    let franken_pointer = ptr_to_jmp_buf();
+    unsafe { longjmp(franken_pointer) };
+}
+
+fn register_signal_handler() {
+    unsafe {
+        libc::signal(SIGUSR1, handle_signals as usize);
+    }
+}
+
+#[allow(dead_code)]
+fn handle_signals(sig: i32) {
+    register_signal_handler();
+
+    let should_shut_down = match sig {
+        SIGHUP => false,
+        SIGALRM => false,
+        SIGTERM => true,
+        SIGQUIT => true,
+        SIGUSR1 => true,
+        _ => false,
+    };
+
+    unsafe {
+        SHUT_DOWN = should_shut_down;
     }
 
-    fn print(&mut self, text: &[u8]) {
-        let color = self.color();
+    return_early();
+}
 
-        let framebuffer = 0xb8000 as *mut u8;
+fn print_depth(depth: usize) {
+    for _ in 0..depth {
+        print!("#");
+    }
+    println!();
+}
 
-        for &character in text {
-            unsafe {
-                framebuffer.offset(self.position).write_volatile(character);
-                framebuffer.offset(self.position + 1).write_volatile(color);
-            }
-            self.position += 2;
+fn dive(depth: usize, max_depth: usize) {
+    unsafe {
+        if SHUT_DOWN {
+            println!("!");
+            return;
         }
     }
+    print_depth(depth);
+
+    if depth >= max_depth {
+        return;
+    } else if depth == MOCK_SIGNAL_AT {
+        unsafe {
+            libc::raise(SIGUSR1);
+        }
+    } else {
+        dive(depth + 1, max_depth);
+    }
+    print_depth(depth);
 }
 
-impl fmt::Write for Cursor {
-    fn write_str(&mut self, s: &str) -> fmt::Result {
-        self.print(s.as_bytes());
-        Ok(())
+fn main() {
+    const JUMP_SET: i32 = 0;
+
+    register_signal_handler();
+
+    let return_point = ptr_to_jmp_buf();
+    let rc = unsafe { setjmp(return_point) };
+    if rc == JUMP_SET {
+        dive(0, 10);
+    } else {
+        println!("early return!");
     }
-}
 
-#[panic_handler]
-#[no_mangle]
-pub fn panic(info: &PanicInfo) -> ! {
-    let mut cursor = Cursor {
-        position: 0,
-        foreground: Color::White,
-        background: Color::Red,
-    };
-    for _ in 0..(80 * 25) {
-        cursor.print(b" ");
-    }
-    cursor.position = 0;
-    write!(cursor, "{}", info).unwrap();
-
-    loop {
-        hlt();
-    }
-}
-
-#[lang = "eh_personality"]
-#[no_mangle]
-pub extern "C" fn eh_personality() {}
-
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
-    panic!("help!");
+    println!("finishing!");
 }
