@@ -91,9 +91,7 @@ fn main() {
     register_signal_handler();
 
     let return_point = ptr_to_jmp_buf();
-    let rc = unsafe {
-        setjmp(return_point);
-    };
+    let rc = unsafe { setjmp(return_point) };
     if rc == JUMP_SET {
         dive(0, 10);
     } else {
